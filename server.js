@@ -1,7 +1,7 @@
 import http from 'http';
 import url from 'url';
 import express from 'express';
-import { graphqlHTTP } from 'express-graphql';
+import { ApolloServer } from 'apollo-server-express';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { loadFilesSync, loadFiles  } from '@graphql-tools/load-files';
 import path from 'path';
@@ -23,21 +23,24 @@ const resolversArray = await loadFiles(
   }
 );
 
-const schema = makeExecutableSchema({
-  typeDefs: typesArray,
-  resolvers: resolversArray,
-});
+async function startApolloServer() {
+  const app = express();
 
-const app = express();
-//app.use(express.json());
-app.use('/graphql', graphqlHTTP({
-  schema: schema,
-  graphiql: true,
-}));
+  const schema = makeExecutableSchema({
+    typeDefs: typesArray,
+    resolvers: resolversArray,
+  });
 
+  const server = new ApolloServer({
+    schema,
+  });
 
-const server = http.createServer(app);
+  await server.start();
+  server.applyMiddleware({ app, path: '/graphql' });
 
-server.listen(PORT, () => {
-  console.log('Listening on port', PORT)
-});
+  app.listen(PORT, () => {
+    console.log('Listening on port', PORT)
+  });
+};
+
+startApolloServer();
